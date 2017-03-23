@@ -91,7 +91,7 @@ git push upstream master
 
 ## Checkout PR
 
-The `checkout-pr` script will checkout the branch for the specified pull request.  This makes it easy to checkout the code for a pull request and manually execute a test or validate the code.
+The `checkout-pr` script will checkout the branch for the specified pull request.  This makes it easy to checkout the code for a pull request and manually execute a test or validate the code. `checkout-nifi-pr` does the same, but for the apache nifi repo in github
 
 ```
 $ ./checkout-pr 80
