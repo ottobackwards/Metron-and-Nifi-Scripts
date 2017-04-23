@@ -141,13 +141,13 @@ nothing to commit, working directory clean
 
 # Support type scripts ( in support/ )
 
-##real-clean-metron
+## real-clean-metron
 
 This script will clean the metron project and it's profile based rpm build
 You need to set $METRON_HOME env var to the root of your metron src tree before
 running
 
-##install-build-all-metron
+## install-build-all-metron
 
 This script will run the install build on the main project and then build the
 rpms
