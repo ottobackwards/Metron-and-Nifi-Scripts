@@ -1,0 +1,15 @@
+#!/usr/bin/env bash
+
+"${METRON_HOME:?:METRON_HOME needs to be set}"
+
+cd $METRON_HOME
+
+echo "building the main project"
+mvn install -DskipTests
+
+cd metron-deployment/
+
+echo "cleaning rpm deployment"
+mvn clean package -P build-rpms
+
+cd ..

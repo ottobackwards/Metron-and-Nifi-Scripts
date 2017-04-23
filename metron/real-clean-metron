@@ -1,0 +1,15 @@
+#!/usr/bin/env bash
+
+METRON_HOME="/Users/ottofowler/src/apache/forks/incubator-metron"
+
+cd $METRON_HOME
+
+echo "cleaning the main project"
+mvn -q clean
+
+cd metron-deployment/
+
+echo "cleaning rpm deployment"
+mvn -q clean -P build-rpms
+
+cd ..
