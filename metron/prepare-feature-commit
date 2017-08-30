@@ -1,0 +1,161 @@
+#/usr/local/bin bash
+#
+#  Licensed to the Apache Software Foundation (ASF) under one or more
+#  contributor license agreements.  See the NOTICE file distributed with
+#  this work for additional information regarding copyright ownership.
+#  The ASF licenses this file to You under the Apache License, Version 2.0
+#  (the "License"); you may not use this file except in compliance with
+#  the License.  You may obtain a copy of the License at
+#
+#      http://www.apache.org/licenses/LICENSE-2.0
+#
+#  Unless required by applicable law or agreed to in writing, software
+#  distributed under the License is distributed on an "AS IS" BASIS,
+#  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+#  See the License for the specific language governing permissions and
+#  limitations under the License.
+#
+
+# github account of committer (you!)
+GITHUB_NAME=ottobackwards
+APACHE_NAME=otto
+
+# not likely to change
+WORK=~/tmp
+UPSTREAM=https://git-wip-us.apache.org/repos/asf/metron.git
+DEST_BRANCH="feature/FEATURENAME"
+
+# retrieve the pull request identifier
+read -p "  pull request: " PR
+if [ -z "$PR" ]; then
+  echo "Error: missing pr"
+  exit 1
+fi
+
+# ensure that the pull request exists
+PR_EXISTS=`curl -sI https://api.github.com/repos/apache/metron/pulls/$PR | grep Status: | sed 's/[^0-9]//g'`
+if [ "$PR_EXISTS" != "200" ]; then
+  echo "Error: pull request #$PR does not exist"
+  exit 1
+fi
+
+# origin repository
+ORIGIN="http://github.com/apache/metron"
+read -p "  origin repo [$ORIGIN]: " INPUT
+[ -n "$INPUT" ] && ORIGIN=$INPUT
+
+# github account of committer (you)
+read -p "  your github username [$GITHUB_NAME]: " INPUT
+[ -n "$INPUT" ] && GITHUB_NAME=$INPUT
+
+# apache id of committer (you)
+read -p "  your apache userid [$APACHE_NAME]: " INPUT
+[ -n "$INPUT" ] && APACHE_NAME=$INPUT
+
+# apache email addr of committer (you)
+APACHE_EMAIL=${APACHE_NAME}@apache.org
+read -p "  your apache email [$APACHE_EMAIL]: " INPUT
+[ -n "$INPUT" ] && APACHE_EMAIL=$INPUT
+
+echo ""
+mkdir -p $WORK
+cd $WORK
+rm -rf $WORK/metron
+
+# clone the repository and fetch updates
+git clone $ORIGIN metron
+cd $WORK/metron
+
+# setup the git user and email for your apache account
+git config user.name "$APACHE_NAME"
+git config user.email $APACHE_EMAIL
+
+# fetch any changes from upstream
+git remote add upstream $UPSTREAM
+git fetch upstream "$DEST_BRANCH"
+
+# merge any changes from upstream
+# do a checkout -b, because $DEST_BRANCH won't exist
+git checkout -b "$DEST_BRANCH" origin/"$DEST_BRANCH"
+git merge upstream/"$DEST_BRANCH"
+
+PR_BRANCH_REF="pull/$PR/head:pr-$PR"
+PR_BRANCH="pr-$PR"
+git fetch origin $PR_BRANCH_REF
+echo ""
+
+# use github api to retrieve the contributor's login
+USER=`curl -s https://api.github.com/repos/apache/metron/pulls/$PR | grep login | head -1 | awk -F":" '{print $2}' | sed 's/[^a-zA-Z.@_-]//g'`
+read -p "  github contributor's username [$USER]: " INPUT
+[ -n "$INPUT" ] && USER=$INPUT
+
+# validate the github contributor
+if [ -z "$USER" ]; then
+  echo "Error: missing username"
+  exit 1
+fi
+
+# attempt to use the github api to retrieve the user's email
+EMAIL=`git log $PR_BRANCH | grep Author | head -1 | awk -F"<" '{print $2}' | sed 's/[<>]//g'`
+read -p "  github contributor's email [$EMAIL]: " INPUT
+[ -n "$INPUT" ] && EMAIL=$INPUT
+
+# validate email
+if [ -z "$EMAIL" ] || [ "$EMAIL" = "null" ]; then
+  echo "Error: missing email"
+  exit 1
+fi
+
+# can we extract the JIRA from the PR title?
+JIRA=`curl -s https://api.github.com/repos/apache/metron/pulls/$PR | grep title | head -1 | egrep -o 'METRON-[0-9]+'`
+read -p "  issue identifier in jira [$JIRA]: " INPUT
+[ -n "$INPUT" ] && JIRA=$INPUT
+
+# validate the JIRA issue
+if [ -z "$JIRA" ]; then
+  echo "Error: missing jira"
+  exit 1
+fi
+
+# attempt to use the jira api to get a description of the jira
+DESC=`curl -s https://issues.apache.org/jira/si/jira.issueviews:issue-xml/$JIRA/$JIRA.xml | grep "<summary>" | sed 's/^.*<summary>//' | sed 's/<.summary>.*$//'`
+read -p "  issue description [$DESC]: " INPUT
+[ -n "$INPUT" ] && DESC=$INPUT
+
+# validate description
+if [ -z "$DESC" ]; then
+  echo "Error: missing description"
+  exit 1
+fi
+
+# commit message
+AUTHOR="$USER <$EMAIL>"
+if [ "$USER" == "$GITHUB_NAME" ]; then
+    MSG="$JIRA $DESC ($USER) closes apache/metron#$PR"
+else
+    MSG="$JIRA $DESC ($USER via $GITHUB_NAME) closes apache/metron#$PR"
+fi
+read -p "  commit message [$MSG]: " INPUT
+[ -n "$INPUT" ] && MSG=$INPUT
+
+
+# merge the contributor's branch and commit
+echo ""
+if git merge --squash "$PR_BRANCH"; then
+  git commit --author="$AUTHOR" -a -m "$MSG"
+else
+  exit $?
+fi
+
+  # review the commit
+  echo ""
+git diff --stat --color "$DEST_BRANCH..upstream/$DEST_BRANCH"
+
+echo ""
+git show --quiet --pretty=fuller HEAD
+
+  echo ""
+  echo "Review commit carefully then run..."
+  echo "    cd $WORK/metron"
+  echo "    git push upstream $DEST_BRANCH"
+echo ""
