@@ -1,0 +1,87 @@
+#/usr/local/bin bash
+#
+#  Licensed to the Apache Software Foundation (ASF) under one or more
+#  contributor license agreements.  See the NOTICE file distributed with
+#  this work for additional information regarding copyright ownership.
+#  The ASF licenses this file to You under the Apache License, Version 2.0
+#  (the "License"); you may not use this file except in compliance with
+#  the License.  You may obtain a copy of the License at
+#
+#      http://www.apache.org/licenses/LICENSE-2.0
+#
+#  Unless required by applicable law or agreed to in writing, software
+#  distributed under the License is distributed on an "AS IS" BASIS,
+#  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+#  See the License for the specific language governing permissions and
+#  limitations under the License.
+#
+
+# apache name of committer (you!)
+APACHE_NAME=otto
+
+# not likely to change
+WORK=~/tmp
+UPSTREAM=https://git-wip-us.apache.org/repos/asf/metron.git
+DEST_BRANCH="feature/FEATURENAME"
+
+# origin repository
+ORIGIN="http://github.com/apache/metron"
+read -p "  origin repo [$ORIGIN]: " INPUT
+[ -n "$INPUT" ] && ORIGIN=$INPUT
+
+# apache id of committer (you)
+read -p "  your apache userid [$APACHE_NAME]: " INPUT
+[ -n "$INPUT" ] && APACHE_NAME=$INPUT
+
+# apache email addr of committer (you)
+APACHE_EMAIL=${APACHE_NAME}@apache.org
+read -p "  your apache email [$APACHE_EMAIL]: " INPUT
+[ -n "$INPUT" ] && APACHE_EMAIL=$INPUT
+
+echo ""
+mkdir -p $WORK
+cd $WORK
+rm -rf $WORK/metron
+
+# clone the repository and fetch updates
+git clone $ORIGIN metron
+cd $WORK/metron
+
+# setup the git user and email for your apache account
+git config user.name "$APACHE_NAME"
+git config user.email $APACHE_EMAIL
+
+# fetch any changes from upstream
+git remote add upstream $UPSTREAM
+git fetch upstream "$DEST_BRANCH"
+
+# merge any changes from upstream
+# do a checkout -b, because $DEST_BRANCH won't exist
+git checkout -b "$DEST_BRANCH" origin/"$DEST_BRANCH"
+
+# commit message
+AUTHOR="$USER <$EMAIL>"
+MSG="$APACHE_NAME($APACHE_EMAIL) syncing $DEST_BRANCH with master"
+read -p "  commit message [$MSG]: " INPUT
+[ -n "$INPUT" ] && MSG=$INPUT
+
+
+# merge in master
+if git pull --squash origin master; then
+  git commit --author="$AUTHOR" -a -m "$MSG"
+else
+  exit $?
+fi
+
+  # review the commit
+  echo ""
+git diff --stat --color "$DEST_BRANCH..upstream/$DEST_BRANCH"
+
+echo ""
+git show --quiet --pretty=fuller HEAD
+
+  echo ""
+  echo "Review commit carefully then run..."
+  echo "    cd $WORK/metron"
+  echo "    git push upstream $DEST_BRANCH"
+echo ""
