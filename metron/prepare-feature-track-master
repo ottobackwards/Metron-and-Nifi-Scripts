@@ -67,7 +67,7 @@ read -p "  commit message [$MSG]: " INPUT
 
 
 # merge in master
-if git pull --squash origin master; then
+if git pull  origin master; then
   git commit --author="$AUTHOR" -a -m "$MSG"
 else
   exit $?
