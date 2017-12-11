@@ -144,25 +144,25 @@ DID_BUILD=0
 if [[ $REPLY =~ ^[Yy]$ ]]; then
   echo "LOG will be created in $WORK"
   cd "apache-metron-$METRON_VERSION-$RC" || exit 1
-  if ! mvn -q -T 2C -DskipTests clean install  | tee ../build-install.log ; then
+  if ! mvn -q -T 2C -DskipTests clean install  ; then
     echo "[ERROR] failed to mvn install metron"
     exit 1
   fi
-  if ! mvn -q -T 2C surefire:test@unit-tests | tee ../build-unit-tests.log ; then
+  if ! mvn -q -T 2C surefire:test@unit-tests ; then
     echo "[ERROR] failed unit tests"
     exit 1
   fi
-  if ! mvn -q surefire:test@integration-tests | tee ../build-integration-tests.log ; then
+  if ! mvn -q surefire:test@integration-tests ; then
     echo "[ERROR] failed integration tests"
     exit 1
   fi
-  if ! mvn -q test --projects metron-interface/metron-config | tee ../build-metron-config-tests.log ; then
+  if ! mvn -q test --projects metron-interface/metron-config  ; then
     echo "[ERROR] failed metron-config tests"
     exit 1
   fi
   build_utils/verify_licenses.sh | tee ../build-lic.log
   cd metron-deployment || exit 1
-  if ! mvn -q package -DskipTests -P build-rpms | tee ../build-rpm.log ; then
+  if ! mvn -q package -DskipTests -P build-rpms ; then
     echo "[ERROR] failed to build rpms"
     exit 1
   fi
