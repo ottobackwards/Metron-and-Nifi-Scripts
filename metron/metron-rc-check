@@ -78,35 +78,29 @@ METRON_ASSEMBLY_SIG="$METRON_ASSEMBLY.asc"
 METRON_KAFKA_BRO_ASSEMBLY="$METRON_RC_DIST/apache-metron-bro-plugin-kafka_$BRO_VERSION.tar.gz"
 METRON_KAFKA_BRO_ASSEMBLY_ASC="$METRON_KAFKA_BRO_ASSEMBLY.asc"
 
-# SHOULD BE FUNCTION
 echo "Downloading $KEYS"
-wget -P "$WORK" "$KEYS"
-if [ $? -ne 0 ]; then
+if ! wget -P "$WORK" "$KEYS" ; then
   echo "[ERROR] Failed to download $KEYS"
   exit 1
 fi
 
 echo "Downloading $METRON_ASSEMBLY"
-wget -P "$WORK" "$METRON_ASSEMBLY"
-if [ $? -ne 0 ]; then
+if ! wget -P "$WORK" "$METRON_ASSEMBLY" ; then
   echo "[ERROR] Failed to download $METRON_ASSEMBLY"
   exit 1
 fi
 echo "Downloading $METRON_ASSEMBLY_SIG"
-wget -P "$WORK" "$METRON_ASSEMBLY_SIG"
-if [ $? -ne 0 ]; then
+if ! wget -P "$WORK" "$METRON_ASSEMBLY_SIG" ; then
   echo "[ERROR] Failed to download $METRON_ASSEMBLY_SIG"
   exit 1
 fi
 echo "Downloading $METRON_KAFKA_BRO_ASSEMBLY"
-wget -P "$WORK" "$METRON_KAFKA_BRO_ASSEMBLY"
-if [ $? -ne 0 ]; then
+if ! wget -P "$WORK" "$METRON_KAFKA_BRO_ASSEMBLY" ; then
   echo "[ERROR] Failed to download $METRON_KAFKA_BRO_ASSEMBLY"
   exit 1
 fi
 echo "Downloading $METRON_KAFKA_BRO_ASSEMBLY_ASC"
-wget -P "$WORK" "$METRON_KAFKA_BRO_ASSEMBLY_ASC"
-if [ $? -ne 0 ]; then
+if ! wget -P "$WORK" "$METRON_KAFKA_BRO_ASSEMBLY_ASC" ; then
   echo "[ERROR] Failed to download $METRON_KAFKA_BRO_ASSEMBLY_ASC"
   exit 1
 fi
@@ -114,41 +108,34 @@ fi
 cd "$WORK" || exit 1
 echo "importing metron keys"
 
-gpg --import KEYS
-
-if [[ $? -ne 0 ]]; then
+if ! gpg --import KEYS ; then
   echo "[ERROR] failed to import KEYS"
   exit 1
 fi
 
 echo "Verifying Metron Assembly"
-gpg --verify ./"apache-metron-$METRON_VERSION-$RC.tar.gz.asc" "apache-metron-$METRON_VERSION-$RC.tar.gz"
-if [[ $? -ne 0 ]]; then
+if ! gpg --verify ./"apache-metron-$METRON_VERSION-$RC.tar.gz.asc" "apache-metron-$METRON_VERSION-$RC.tar.gz" ; then
   echo "[ERROR] failed to verify Metron Assembly"
   exit 1
 fi
 
 echo "Verifying Bro Kafka Plugin Assembly"
-gpg --verify ./"apache-metron-bro-plugin-kafka_$BRO_VERSION.tar.gz.asc" "apache-metron-bro-plugin-kafka_$BRO_VERSION.tar.gz"
-if [[ $? -ne 0 ]]; then
+if ! gpg --verify ./"apache-metron-bro-plugin-kafka_$BRO_VERSION.tar.gz.asc" "apache-metron-bro-plugin-kafka_$BRO_VERSION.tar.gz" ; then
   echo "[ERROR] failed to verify Bro Kafka Plugin Assembly"
   exit 1
 fi
 
 echo "Unpacking Assemblies"
-tar -xzf "apache-metron-$METRON_VERSION-$RC.tar.gz"
-if [[ $? -ne 0 ]]; then
+if ! tar -xzf "apache-metron-$METRON_VERSION-$RC.tar.gz" ; then
   echo "[ERROR] failed to unpack Metron Assembly"
   exit 1
 fi
 
-tar -xzf "apache-metron-bro-plugin-kafka_$BRO_VERSION.tar.gz"
-if [[ $? -ne 0 ]]; then
+if ! tar -xzf "apache-metron-bro-plugin-kafka_$BRO_VERSION.tar.gz" ; then
   echo "[ERROR] failed to unpack  Bro Kafka Plugin Assembly"
   exit 1
 fi
-#ask if build and test METRON
-# run tests?
+
 echo ""
 echo ""
 read -p "  run test suite [install, unit tests, integration tests, ui tests, licenses, rpm build]? [yN] " -n 1 -r
@@ -157,39 +144,30 @@ DID_BUILD=0
 if [[ $REPLY =~ ^[Yy]$ ]]; then
   echo "LOG will be created in $WORK"
   cd "apache-metron-$METRON_VERSION-$RC" || exit 1
-  mvn -q -T 2C -DskipTests clean install  | tee ../build-install.log
-  if [[ $? -ne 0 ]]; then
+  if ! mvn -q -T 2C -DskipTests clean install  | tee ../build-install.log ; then
     echo "[ERROR] failed to mvn install metron"
     exit 1
   fi
-  mvn -q -T 2C surefire:test@unit-tests | tee ../build-unit-tests.log
-  if [[ $? -ne 0 ]]; then
+  if ! mvn -q -T 2C surefire:test@unit-tests | tee ../build-unit-tests.log ; then
     echo "[ERROR] failed unit tests"
     exit 1
   fi
-  mvn -q surefire:test@integration-tests | tee ../build-integration-tests.log
-  if [[ $? -ne 0 ]]; then
+  if ! mvn -q surefire:test@integration-tests | tee ../build-integration-tests.log ; then
     echo "[ERROR] failed integration tests"
     exit 1
   fi
-  mvn -q test --projects metron-interface/metron-config | tee ../build-metron-config-tests.log
-  if [[ $? -ne 0 ]]; then
+  if ! mvn -q test --projects metron-interface/metron-config | tee ../build-metron-config-tests.log ; then
     echo "[ERROR] failed metron-config tests"
     exit 1
   fi
   build_utils/verify_licenses.sh | tee ../build-lic.log
   cd metron-deployment || exit 1
-  mvn -q package -DskipTests -P build-rpms | tee ../build-rpm.log
-  if [[ $? -ne 0 ]]; then
+  if ! mvn -q package -DskipTests -P build-rpms | tee ../build-rpm.log ; then
     echo "[ERROR] failed to build rpms"
     exit 1
   fi
   cd .. || exit 1
   DID_BUILD=1
-fi
-if [[ $? -ne 0 ]]; then
-  echo "[ERROR] failed test suite"
-  exit 1
 fi
 
 #ask if build test vagrant METRON
