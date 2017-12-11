@@ -1,4 +1,4 @@
-#/usr/local/bin bash
+#!/usr/bin/env bash
 #
 #  Licensed to the Apache Software Foundation (ASF) under one or more
 #  contributor license agreements.  See the NOTICE file distributed with
@@ -68,7 +68,7 @@ if [ -d "$WORK" ]; then
 fi
 
 if [ ! -d "$WORK" ]; then
-  mkdir -p $WORK
+  mkdir -p "$WORK"
 fi
 echo "Working directory $WORK"
 
@@ -87,31 +87,31 @@ if [ $? -ne 0 ]; then
 fi
 
 echo "Downloading $METRON_ASSEMBLY"
-wget -P $WORK $METRON_ASSEMBLY
+wget -P "$WORK" "$METRON_ASSEMBLY"
 if [ $? -ne 0 ]; then
   echo "[ERROR] Failed to download $METRON_ASSEMBLY"
   exit 1
 fi
 echo "Downloading $METRON_ASSEMBLY_SIG"
-wget -P $WORK $METRON_ASSEMBLY_SIG
+wget -P "$WORK" "$METRON_ASSEMBLY_SIG"
 if [ $? -ne 0 ]; then
   echo "[ERROR] Failed to download $METRON_ASSEMBLY_SIG"
   exit 1
 fi
 echo "Downloading $METRON_KAFKA_BRO_ASSEMBLY"
-wget -P $WORK $METRON_KAFKA_BRO_ASSEMBLY
+wget -P "$WORK" "$METRON_KAFKA_BRO_ASSEMBLY"
 if [ $? -ne 0 ]; then
   echo "[ERROR] Failed to download $METRON_KAFKA_BRO_ASSEMBLY"
   exit 1
 fi
 echo "Downloading $METRON_KAFKA_BRO_ASSEMBLY_ASC"
-wget -P $WORK $METRON_KAFKA_BRO_ASSEMBLY_ASC
+wget -P "$WORK" "$METRON_KAFKA_BRO_ASSEMBLY_ASC"
 if [ $? -ne 0 ]; then
   echo "[ERROR] Failed to download $METRON_KAFKA_BRO_ASSEMBLY_ASC"
   exit 1
 fi
 
-cd $WORK
+cd "$WORK" || exit 1
 echo "importing metron keys"
 
 gpg --import KEYS
@@ -156,16 +156,36 @@ echo
 DID_BUILD=0
 if [[ $REPLY =~ ^[Yy]$ ]]; then
   echo "LOG will be created in $WORK"
-  cd "apache-metron-$METRON_VERSION-$RC"
-  mvn -q -T 2C -DskipTests clean install  | tee ../build-install.log &&
-    mvn -q -T 2C surefire:test@unit-tests | tee ../build-unit-tests.log &&
-    mvn -q surefire:test@integration-tests | tee ../build-integration-tests.log &&
-    mvn -q test --projects metron-interface/metron-config | tee ../build-metron-config-tests.log &&
-    build_utils/verify_licenses.sh | tee ../build-lic.log &&
-    cd metron-deployment &&
-    mvn -q package -DskipTests -P build-rpms | tee ../build-rpm.log &&
-    cd ..
-    DID_BUILD=1
+  cd "apache-metron-$METRON_VERSION-$RC" || exit 1
+  mvn -q -T 2C -DskipTests clean install  | tee ../build-install.log
+  if [[ $? -ne 0 ]]; then
+    echo "[ERROR] failed to mvn install metron"
+    exit 1
+  fi
+  mvn -q -T 2C surefire:test@unit-tests | tee ../build-unit-tests.log
+  if [[ $? -ne 0 ]]; then
+    echo "[ERROR] failed unit tests"
+    exit 1
+  fi
+  mvn -q surefire:test@integration-tests | tee ../build-integration-tests.log
+  if [[ $? -ne 0 ]]; then
+    echo "[ERROR] failed integration tests"
+    exit 1
+  fi
+  mvn -q test --projects metron-interface/metron-config | tee ../build-metron-config-tests.log
+  if [[ $? -ne 0 ]]; then
+    echo "[ERROR] failed metron-config tests"
+    exit 1
+  fi
+  build_utils/verify_licenses.sh | tee ../build-lic.log
+  cd metron-deployment || exit 1
+  mvn -q package -DskipTests -P build-rpms | tee ../build-rpm.log
+  if [[ $? -ne 0 ]]; then
+    echo "[ERROR] failed to build rpms"
+    exit 1
+  fi
+  cd .. || exit 1
+  DID_BUILD=1
 fi
 if [[ $? -ne 0 ]]; then
   echo "[ERROR] failed test suite"
@@ -180,7 +200,7 @@ echo ""
 read -p "  run vagrant full_dev? [yN] " -n 1 -r
 echo
 if [[ $REPLY =~ ^[Yy]$ ]]; then
-  cd "$WORK/apache-metron-$METRON_VERSION-$RC/metron-deployment/vagrant/full-dev-platfrom
+  cd "$WORK/apache-metron-$METRON_VERSION-$RC/metron-deployment/vagrant/full-dev-platfrom" || exit 1
   if [[ $DID_BUILD -ne 1 ]]; then
     vagrant up
   else
