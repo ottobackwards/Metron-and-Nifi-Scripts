@@ -142,7 +142,6 @@ read -p "  run test suite [install, unit tests, integration tests, ui tests, lic
 echo
 DID_BUILD=0
 if [[ $REPLY =~ ^[Yy]$ ]]; then
-  echo "LOG will be created in $WORK"
   cd "apache-metron-$METRON_VERSION-$RC" || exit 1
   if ! mvn -q -T 2C -DskipTests clean install  ; then
     echo "[ERROR] failed to mvn install metron"
