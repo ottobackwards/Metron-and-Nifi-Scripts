@@ -34,7 +34,6 @@ else
       RC=$(echo "$2" | tr '[:upper:]' '[:lower:]')
       UPPER_RC=$(echo "$2" | tr '[:lower:]' '[:upper:]')
     elif [[ "$2" =~ ^[0-9]+ ]]; then
-      #statements
       RC=rc"$2"
       UPPER_RC=RC"$2"
     else
@@ -50,13 +49,13 @@ else
 fi
 
 echo "Metron Version $METRON_VERSION"
-echo "Release Canidate $RC"
+echo "Release Candidate $RC"
 
 METRON_RC_DIST="$METRON_DIST$METRON_VERSION-$UPPER_RC"
 echo "Metron RC Distribution Root is $METRON_RC_DIST"
 
 # working directory
-WORK=~/tmp/metron-$METRON_VERSION-$RC
+WORK="~/tmp/metron-$METRON_VERSION-$RC"
 
 # handle tilde expansion
 WORK="${WORK/#\~/$HOME}"
@@ -162,7 +161,7 @@ if [[ $REPLY =~ ^[Yy]$ ]]; then
   build_utils/verify_licenses.sh | tee ../build-lic.log
   cd metron-deployment || exit 1
   if ! mvn -q package -DskipTests -P build-rpms ; then
-    echo "[ERROR] failed to build rpms"
+    echo "[ERROR] failed to build rpm"
     exit 1
   fi
   cd .. || exit 1
@@ -177,8 +176,8 @@ echo ""
 read -p "  run vagrant full_dev? [yN] " -n 1 -r
 echo
 if [[ $REPLY =~ ^[Yy]$ ]]; then
-  cd "$WORK/apache-metron-$METRON_VERSION-$RC/metron-deployment/vagrant/full-dev-platfrom" || exit 1
-  if [[ $DID_BUILD -ne 1 ]]; then
+  cd "$WORK/apache-metron-$METRON_VERSION-$RC/metron-deployment/vagrant/full-dev-platform" || exit 1
+  if [[ ${DID_BUILD} -ne 1 ]]; then
     vagrant up
   else
     vagrant --ansible-skip-tags="build,sensors,quick-dev" up
